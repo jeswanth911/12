@@ -1,0 +1,67 @@
+version: '3.9'
+
+services:
+  backend:
+    build: .
+    container_name: 12_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./metadata:/app/metadata
+      - ./sql_exports:/app/sql_exports
+      - sqlite_data:/app/data
+      - ./logs:/app/logs
+      - ./config/.env.production:/app/.env:ro
+    environment:
+      - ENV=production
+      - MAX_UPLOAD_SIZE=524288000  # 500MB
+      - DATABASE_URL=sqlite:///app/data/amma.db
+      - REDIS_URL=redis://redis:6379
+      # Add other env vars here securely
+    depends_on:
+      - redis
+      # - postgres (optional)
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # postgres:
+  #   image: postgres:15-alpine
+  #   restart: always
+  #   environment:
+  #     POSTGRES_USER: amma
+  #     POSTGRES_PASSWORD: securepassword
+  #     POSTGRES_DB: amma_db
+  #   volumes:
+  #     - pg_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD", "pg_isready", "-U", "amma"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 5
+
+volumes:
+  sqlite_data:
+  redis_data:
+  # pg_data:
+  
